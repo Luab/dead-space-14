@@ -256,7 +256,8 @@ public sealed class ShishaSystem : SharedShishaSystem
         visual.Sprite = ent.Comp.RopeSprite;
         visual.Sag = ent.Comp.HoseSag;
         visual.OffsetA = new System.Numerics.Vector2(0.125f, -0.125f);
-        visual.OffsetB = new System.Numerics.Vector2(0, 0.1f);
+        // Match the hose socket on the 32px SS220 base sprite: 6px right, 3px up from center.
+        visual.OffsetB = new System.Numerics.Vector2(6f / 32f, 3f / 32f);
         Dirty(ent.Comp.Hose.Value, visual);
     }
 

@@ -1,0 +1,10 @@
+ent-Shisha = shisha
+    .desc = A portable water pipe. Click to take or return the hose. Drag the base onto yourself to carry it. The hose retracts when stretched too far.
+ent-ShishaHose = shisha hose
+    .desc = A mouthpiece connected to a shisha. Activate it in your hand or use it on yourself to take a puff. Use it on its base to put it back.
+shisha-take-hose = Take hose
+shisha-hands-full = You need a free hand to take the hose.
+shisha-wrong-hose = This hose belongs to another shisha.
+shisha-empty = The empty shisha bubbles.
+shisha-puff = You take a puff from the shisha.
+construction-graph-tag-ashtray = ashtray

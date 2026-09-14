@@ -1,0 +1,86 @@
+- type: entity
+  parent: BaseItem
+  id: Shisha
+  name: shisha
+  description: A portable water pipe. Click to take or return the hose. Drag the base onto yourself to carry it. The hose retracts when stretched too far.
+  components:
+  - type: Shisha
+    hoseLength: 0.25
+    dose: 6
+    puffDuration: 2
+    hoseSag: 0.15
+    ropeSprite:
+      sprite: _DeadSpace/Objects/Consumable/Smokeables/hookah_rope.rsi
+      state: rope
+    puffPrototype: ShishaPuff
+    puffSound:
+      path: /Audio/Effects/cig_snuff.ogg
+    emptyPuffSound:
+      path: /Audio/Effects/Chemistry/bubbles.ogg
+  - type: Sprite
+    sprite: _DeadSpace/Objects/Consumable/Smokeables/hookah.rsi
+    layers:
+    - state: icon-no-hose
+      map: [ "enum.ShishaVisuals.Base" ]
+  - type: Appearance
+  - type: GenericVisualizer
+    visuals:
+      enum.ShishaVisuals.HoseDocked:
+        enum.ShishaVisuals.Base:
+          True: { state: icon }
+          False: { state: icon-no-hose }
+  - type: Item
+    size: Normal
+    sprite: _DeadSpace/Objects/Consumable/Smokeables/hookah.rsi
+    inhandVisuals:
+      left:
+      - state: icon-no-hose
+        scale: 0.5, 0.5
+        offset: -0.15, -0.1
+      right:
+      - state: icon-no-hose
+        scale: 0.5, 0.5
+        offset: 0.15, -0.1
+  - type: ContainerContainer
+    containers:
+      shisha_hose: !type:ContainerSlot
+  - type: SolutionContainerManager
+    solutions:
+      shisha:
+        maxVol: 30
+  - type: RefillableSolution
+    solution: shisha
+  - type: ExaminableSolution
+    solution: shisha
+    exactVolume: true
+  - type: Construction
+    graph: Shisha
+    node: shisha
+
+- type: entity
+  parent: BaseItem
+  id: ShishaHose
+  name: shisha hose
+  description: A mouthpiece connected to a shisha. Activate it in your hand or use it on yourself to take a puff. Use it on its base to put it back.
+  components:
+  - type: ShishaHose
+  - type: Sprite
+    sprite: _DeadSpace/Objects/Consumable/Smokeables/hookah_hose.rsi
+    state: icon
+  - type: Item
+    size: Small
+    sprite: _DeadSpace/Objects/Consumable/Smokeables/hookah_hose.rsi
+
+# Cosmetic only: no chemical smoke, occlusion, or atmosphere changes.
+- type: entity
+  id: ShishaPuff
+  categories: [ HideSpawnMenu ]
+  components:
+  - type: Sprite
+    sprite: Effects/chemsmoke.rsi
+    state: chemsmoke
+    drawdepth: Effects
+    scale: 0.3, 0.3
+    color: "#FFFFFF80"
+  - type: TimedDespawn
+    lifetime: 0.6

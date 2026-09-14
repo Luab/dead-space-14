@@ -59,8 +59,22 @@ public sealed class ShishaTest : MovementTest
             Assert.That(Base.Comp.Hose, Is.Not.Null);
             Assert.That(Shisha.IsDocked(Base), Is.True);
             Assert.That(Solutions.TryGetSolution(Base.Owner, "shisha", out var sol, out _), Is.True);
-            Assert.That(Solutions.TryAddSolution(sol!.Value, new Solution(ReagentA, amount)), Is.True);
+            Assert.That(Solutions.TryAddSolution(sol!.Value, new Solution(ReagentA, Math.Max(amount, 1))), Is.True);
         });
+        await PlaceInHands("Coal1");
+        await Interact();
+        await PlaceInHands("CheapLighter");
+        await Interact();
+        await DeleteHeldEntity();
+        Assert.That(Base.Comp.Lit, Is.True);
+        if (amount == 0)
+        {
+            await Server.WaitPost(() =>
+            {
+                Solutions.TryGetSolution(Base.Owner, "shisha", out var sol, out var solution);
+                Solutions.SplitSolution(sol!.Value, solution!.Volume);
+            });
+        }
     }
 
     private async Task TakeHose()
@@ -224,13 +238,13 @@ public sealed class ShishaTest : MovementTest
             Assert.That(cBase.Hose, Is.EqualTo(ToClient(hose)));
             Assert.That(CEntMan.GetComponent<ShishaHoseComponent>(ToClient(hose)).Base, Is.EqualTo(CTarget));
             Assert.That(CEntMan.HasComponent<ShishaHoseVisualsComponent>(ToClient(hose)), Is.True);
-            await AssertBaseSprite("icon-no-hose");
+            await AssertBaseSprite("icon-lit-no-hose");
             await Interact();
             await RunTicks(5);
             Assert.That(Shisha.IsDocked(Base), Is.True);
             Assert.That(HandSys.IsHolding(SPlayer, hose), Is.False);
             Assert.That(CEntMan.HasComponent<ShishaHoseVisualsComponent>(ToClient(hose)), Is.False);
-            await AssertBaseSprite("icon");
+            await AssertBaseSprite("icon-lit");
         }
     }
 
@@ -417,7 +431,7 @@ public sealed class ShishaTest : MovementTest
     }
 
     [Test]
-    public async Task RefillThroughNormalInteraction()
+    public async Task LiquidsCannotReplaceFiller()
     {
         await CreateShisha(0);
         var beaker = await PlaceInHands("Beaker");
@@ -427,7 +441,7 @@ public sealed class ShishaTest : MovementTest
             Assert.That(Solutions.TryAddSolution(sol!.Value, new Solution(ReagentA, 10)), Is.True);
         });
         await Interact();
-        Assert.That(Volume(), Is.GreaterThan(FixedPoint2.Zero));
+        Assert.That(Volume(), Is.EqualTo(FixedPoint2.Zero));
         await Server.WaitAssertion(() =>
         {
             Solutions.TryGetSolution(ToServer(beaker), "beaker", out _, out var solution);

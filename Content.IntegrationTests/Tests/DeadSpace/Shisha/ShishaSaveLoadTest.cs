@@ -15,7 +15,8 @@ public sealed class ShishaSaveLoadTest
     [TestCase("docked")]
     [TestCase("held")]
     [TestCase("destroyed")]
-    public async Task SaveLoadPreservesOwnedHoseAndReservoir(string state)
+    [TestCase("unlit")]
+    public async Task SaveLoadPreservesOwnedHoseFillerAndFuel(string state)
     {
         await using var pair = await PoolManager.GetServerClient(new PoolSettings { Dirty = true });
         var server = pair.Server;
@@ -32,8 +33,10 @@ public sealed class ShishaSaveLoadTest
         {
             var uid = em.SpawnEntity("Shisha", mapData.GridCoords);
             var component = em.GetComponent<ShishaComponent>(uid);
+            component.FuelRemaining = 123;
+            component.Lit = state != "unlit";
             Assert.That(solutions.TryGetSolution(uid, "shisha", out var sol, out _), Is.True);
-            Assert.That(solutions.TryAddSolution(sol!.Value, new Solution("Water", 12)), Is.True);
+            Assert.That(solutions.TryAddSolution(sol!.Value, new Solution("Nicotine", 12)), Is.True);
             if (state == "held")
             {
                 var holder = em.SpawnEntity("MobHuman", mapData.GridCoords);
@@ -61,6 +64,8 @@ public sealed class ShishaSaveLoadTest
                         continue;
                     baseCount++;
                     Assert.That(shisha.HoseInitialized, Is.True);
+                    Assert.That(shisha.FuelRemaining, Is.EqualTo(123));
+                    Assert.That(shisha.Lit, Is.EqualTo(state != "unlit"));
                     Assert.That(solutions.TryGetSolution(loaded, "shisha", out _, out var reservoir), Is.True);
                     Assert.That(reservoir!.Volume, Is.EqualTo(FixedPoint2.New(12)));
                     if (state == "destroyed")

@@ -1,4 +1,5 @@
 using Content.Shared.FixedPoint;
+using Content.Shared.Stacks;
 using Robust.Shared.Audio;
 using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
@@ -24,6 +25,22 @@ public sealed partial class ShishaComponent : Component
 
     [DataField]
     public string Solution = "shisha";
+
+    [DataField]
+    public ProtoId<StackPrototype> Fuel = "Coal";
+
+    /// <summary>One piece of coal supplies this many seconds of heat.</summary>
+    [DataField]
+    public float FuelPerItem = 300f;
+
+    [DataField]
+    public float FuelRemaining;
+
+    [DataField]
+    public bool Lit;
+
+    [DataField]
+    public SoundSpecifier LightSound = new SoundPathSpecifier("/Audio/Effects/cig_light.ogg");
 
     [DataField]
     public float HoseLength = 0.25f;

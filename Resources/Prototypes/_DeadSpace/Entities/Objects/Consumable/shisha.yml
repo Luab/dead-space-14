@@ -2,13 +2,14 @@
   parent: BaseItem
   id: Shisha
   name: shisha
-  description: A portable water pipe. Click to take or return the hose. Drag the base onto yourself to carry it. The hose retracts when stretched too far.
+  description: A portable water pipe. Add coal and ground tobacco or other smokable filler, then light it. Click to take or return the hose. Drag the base onto yourself to carry it.
   components:
   - type: Shisha
     hoseLength: 0.25
     dose: 6
     puffDuration: 2
     hoseSag: 0.15
+    fuelPerItem: 300
     ropeSprite:
       sprite: _SS220/Objects/Specific/Hookah/hookah_rope.rsi
       state: rope
@@ -25,10 +26,14 @@
   - type: Appearance
   - type: GenericVisualizer
     visuals:
-      enum.ShishaVisuals.HoseDocked:
+      enum.ShishaVisuals.State:
         enum.ShishaVisuals.Base:
-          True: { state: icon }
-          False: { state: icon-no-hose }
+          icon: { state: icon }
+          icon-no-hose: { state: icon-no-hose }
+          icon-coal: { state: icon-coal }
+          icon-coal-no-hose: { state: icon-coal-no-hose }
+          icon-lit: { state: icon-lit }
+          icon-lit-no-hose: { state: icon-lit-no-hose }
   - type: Item
     size: Normal
     sprite: _SS220/Objects/Specific/Hookah/hookah.rsi
@@ -48,8 +53,6 @@
     solutions:
       shisha:
         maxVol: 30
-  - type: RefillableSolution
-    solution: shisha
   - type: ExaminableSolution
     solution: shisha
     exactVolume: true

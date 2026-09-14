@@ -22,7 +22,7 @@ namespace Content.Server.DeadSpace.Smokables.Systems;
 /// Owns hose docking and consumption. The hose is an existing item, not a newly spawned
 /// copy on each retrieval. All completion checks use the current base reservoir.
 /// </summary>
-public sealed class ShishaSystem : SharedShishaSystem
+public sealed partial class ShishaSystem : SharedShishaSystem
 {
     private const float ConnectionCheckInterval = 0.25f;
     private float _connectionCheckAccumulator;
@@ -43,12 +43,13 @@ public sealed class ShishaSystem : SharedShishaSystem
     public override void Initialize()
     {
         base.Initialize();
+        InitializeFuel();
         SubscribeLocalEvent<BeforeSerializationEvent>(OnBeforeSave);
         SubscribeLocalEvent<ShishaComponent, MapInitEvent>(OnMapInit);
         SubscribeLocalEvent<ShishaComponent, ComponentShutdown>(OnBaseShutdown);
         SubscribeLocalEvent<ShishaComponent, ContainerIsInsertingAttemptEvent>(OnInsertAttempt);
         SubscribeLocalEvent<ShishaComponent, GetVerbsEvent<AlternativeVerb>>(OnVerbs);
-        SubscribeLocalEvent<ShishaComponent, InteractUsingEvent>(OnReturnInteraction);
+        SubscribeLocalEvent<ShishaComponent, InteractUsingEvent>(OnInteractUsing);
         SubscribeLocalEvent<ShishaHoseComponent, ComponentShutdown>(OnHoseShutdown);
         SubscribeLocalEvent<ShishaHoseComponent, EntGotRemovedFromContainerMessage>(OnHoseRemoved);
         SubscribeLocalEvent<ShishaHoseComponent, ThrowItemAttemptEvent>(OnThrow);
@@ -89,6 +90,8 @@ public sealed class ShishaSystem : SharedShishaSystem
             hose = Spawn(ent.Comp.HosePrototype, Transform(ent).Coordinates);
 
         ent.Comp.HoseInitialized = true;
+        ent.Comp.Lit &= ent.Comp.FuelRemaining > 0;
+        UpdateAppearance(ent, false);
 
         if (!TryComp<ShishaHoseComponent>(hose, out var component))
             return;
@@ -108,7 +111,11 @@ public sealed class ShishaSystem : SharedShishaSystem
 
     private void OnVerbs(Entity<ShishaComponent> ent, ref GetVerbsEvent<AlternativeVerb> args)
     {
-        if (!args.CanAccess || !args.CanInteract || ent.Comp.Hose == null || !IsDocked(ent))
+        if (!args.CanAccess || !args.CanInteract)
+            return;
+
+        AddFuelVerbs(ent, ref args);
+        if (ent.Comp.Hose == null || !IsDocked(ent))
             return;
 
         var user = args.User;
@@ -153,10 +160,16 @@ public sealed class ShishaSystem : SharedShishaSystem
         return true;
     }
 
-    private void OnReturnInteraction(Entity<ShishaComponent> ent, ref InteractUsingEvent args)
+    private void OnInteractUsing(Entity<ShishaComponent> ent, ref InteractUsingEvent args)
     {
-        if (args.Handled || !HasComp<ShishaHoseComponent>(args.Used))
+        if (args.Handled)
             return;
+
+        if (!HasComp<ShishaHoseComponent>(args.Used))
+        {
+            LoadOrLight(ent, ref args);
+            return;
+        }
 
         args.Handled = true;
         if (args.Used != ent.Comp.Hose)
@@ -176,7 +189,7 @@ public sealed class ShishaSystem : SharedShishaSystem
 
         CancelPuff(hose);
         RemComp<ShishaHoseVisualsComponent>(ent.Comp.Hose.Value);
-        _appearance.SetData(ent.Owner, ShishaVisuals.HoseDocked, true);
+        UpdateAppearance(ent, true);
         if (IsDocked(ent))
             return;
 
@@ -235,11 +248,17 @@ public sealed class ShishaSystem : SharedShishaSystem
             return;
 
         // Check once after a slow frame rather than repeating expensive checks to catch up.
+        var elapsed = _connectionCheckAccumulator;
         _connectionCheckAccumulator %= ConnectionCheckInterval;
+        elapsed -= _connectionCheckAccumulator;
 
-        var query = EntityQueryEnumerator<ShishaComponent>();
-        while (query.MoveNext(out var uid, out var shisha))
+        var query = EntityQueryEnumerator<ShishaComponent, MetaDataComponent>();
+        while (query.MoveNext(out var uid, out var shisha, out var metadata))
         {
+            if (metadata.EntityPaused)
+                continue;
+
+            UpdateFuel((uid, shisha), elapsed);
             if (shisha.Hose is not { } hose || IsDocked((uid, shisha)) || Terminating(hose))
                 continue;
 
@@ -250,7 +269,7 @@ public sealed class ShishaSystem : SharedShishaSystem
 
     private void UpdateVisual(Entity<ShishaComponent> ent)
     {
-        _appearance.SetData(ent.Owner, ShishaVisuals.HoseDocked, false);
+        UpdateAppearance(ent, false);
         var visual = EnsureComp<ShishaHoseVisualsComponent>(ent.Comp.Hose!.Value);
         visual.Target = ent;
         visual.Sprite = ent.Comp.RopeSprite;
@@ -287,7 +306,11 @@ public sealed class ShishaSystem : SharedShishaSystem
             || !_ingestion.HasMouthAvailable(user, user) || _doAfter.IsRunning(ent.Comp.Puff))
             return;
 
-        if (shisha.Dose <= 0 || !_solutions.TryGetSolution(ent.Comp.Base.Value, shisha.Solution, out _, out _))
+        if (shisha.Dose <= 0 || !_solutions.TryGetSolution(ent.Comp.Base.Value, shisha.Solution, out _, out var solution))
+            return;
+
+        // Empty puffs still bubble, but filler cannot be inhaled without burning coal.
+        if (solution.Volume > 0 && !CanSmoke((ent.Comp.Base.Value, shisha), user))
             return;
 
         var doAfter = new DoAfterArgs(EntityManager, user, shisha.PuffDuration,
@@ -321,6 +344,9 @@ public sealed class ShishaSystem : SharedShishaSystem
             return;
         }
 
+        if (!CanSmoke((ent.Comp.Base.Value, shisha), args.User))
+            return;
+
         var inhaled = _solutions.SplitSolution(sol.Value, Content.Shared.FixedPoint.FixedPoint2.Min(shisha.Dose, solution.Volume));
         if (!_bloodstream.TryAddToBloodstream(args.User, inhaled))
         {
@@ -353,7 +379,7 @@ public sealed class ShishaSystem : SharedShishaSystem
         if (TryComp<ShishaComponent>(ent.Comp.Base, out var shisha) && !Terminating(ent.Comp.Base.Value))
         {
             shisha.Hose = null;
-            _appearance.SetData(ent.Comp.Base.Value, ShishaVisuals.HoseDocked, false);
+            UpdateAppearance((ent.Comp.Base.Value, shisha), false);
             Dirty(ent.Comp.Base.Value, shisha);
         }
     }

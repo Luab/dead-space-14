@@ -2,7 +2,7 @@
   parent: BaseItem
   id: Shisha
   name: shisha
-  description: A portable water pipe. Add coal and ground tobacco or other smokable filler, then light it. Click to take or return the hose. Drag the base onto yourself to carry it.
+  description: A water pipe for a leisurely smoke.
   components:
   - type: Shisha
     hoseLength: 0.25
@@ -52,7 +52,7 @@
   - type: SolutionContainerManager
     solutions:
       shisha:
-        maxVol: 30
+        maxVol: 900
   - type: ExaminableSolution
     solution: shisha
     exactVolume: true
@@ -64,7 +64,7 @@
   parent: BaseItem
   id: ShishaHose
   name: shisha hose
-  description: A mouthpiece connected to a shisha. Activate it in your hand or use it on yourself to take a puff. Use it on its base to put it back.
+  description: A mouthpiece on a hose. Mind the distance.
   components:
   - type: ShishaHose
   - type: Sprite

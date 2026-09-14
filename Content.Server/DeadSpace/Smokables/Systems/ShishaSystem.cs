@@ -114,7 +114,6 @@ public sealed partial class ShishaSystem : SharedShishaSystem
         if (!args.CanAccess || !args.CanInteract)
             return;
 
-        AddFuelVerbs(ent, ref args);
         if (ent.Comp.Hose == null || !IsDocked(ent))
             return;
 

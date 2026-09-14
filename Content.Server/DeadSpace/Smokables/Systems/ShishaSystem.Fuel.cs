@@ -1,11 +1,9 @@
-using Content.Shared.Atmos;
 using Content.Shared.DeadSpace.Smokables;
 using Content.Shared.Examine;
 using Content.Shared.Interaction;
 using Content.Shared.Stacks;
 using Content.Shared.Tag;
 using Content.Shared.Temperature;
-using Content.Shared.Verbs;
 using Robust.Shared.Prototypes;
 
 namespace Content.Server.DeadSpace.Smokables.Systems;
@@ -21,7 +19,6 @@ public sealed partial class ShishaSystem
     {
         SubscribeLocalEvent<ShishaComponent, AfterInteractEvent>(OnBaseAfterInteract);
         SubscribeLocalEvent<ShishaComponent, ExaminedEvent>(OnExamined);
-        SubscribeLocalEvent<ShishaComponent, ExtinguishEvent>(OnExtinguish);
     }
 
     private void LoadOrLight(Entity<ShishaComponent> ent, ref InteractUsingEvent args)
@@ -29,12 +26,6 @@ public sealed partial class ShishaSystem
         if (TryComp<StackComponent>(args.Used, out var stack) && stack.StackTypeId == ent.Comp.Fuel)
         {
             args.Handled = true;
-            if (ent.Comp.Lit)
-            {
-                _popup.PopupEntity(Loc.GetString("shisha-extinguish-first"), ent, args.User);
-                return;
-            }
-
             if (ent.Comp.FuelRemaining > 0)
             {
                 _popup.PopupEntity(Loc.GetString("shisha-coal-loaded"), ent, args.User);
@@ -54,12 +45,6 @@ public sealed partial class ShishaSystem
         if (_tags.HasTag(args.Used, FillerTag))
         {
             args.Handled = true;
-            if (ent.Comp.Lit)
-            {
-                _popup.PopupEntity(Loc.GetString("shisha-extinguish-first"), ent, args.User);
-                return;
-            }
-
             if (Terminating(args.Used) || stack is { Count: <= 0 }
                 || !_solutions.TryGetSolution(args.Used, "food", out _, out var filler)
                 || filler.Volume <= 0)
@@ -140,15 +125,10 @@ public sealed partial class ShishaSystem
         // Reuse the existing quarter-second pass; idle filler never loses reagents.
         ent.Comp.FuelRemaining = MathF.Max(0, ent.Comp.FuelRemaining - elapsed);
         if (ent.Comp.FuelRemaining <= 0)
-            Extinguish(ent);
+            BurnOut(ent);
     }
 
-    private void OnExtinguish(Entity<ShishaComponent> ent, ref ExtinguishEvent args)
-    {
-        Extinguish(ent);
-    }
-
-    private void Extinguish(Entity<ShishaComponent> ent)
+    private void BurnOut(Entity<ShishaComponent> ent)
     {
         if (!ent.Comp.Lit)
             return;
@@ -157,23 +137,6 @@ public sealed partial class ShishaSystem
         if (TryComp<ShishaHoseComponent>(ent.Comp.Hose, out var hose))
             CancelPuff(hose);
         UpdateAppearance(ent, IsDocked(ent));
-    }
-
-    private void AddFuelVerbs(Entity<ShishaComponent> ent, ref GetVerbsEvent<AlternativeVerb> args)
-    {
-        if (!ent.Comp.Lit)
-            return;
-
-        var user = args.User;
-        args.Verbs.Add(new AlternativeVerb
-        {
-            Text = Loc.GetString("shisha-extinguish"),
-            Act = () =>
-            {
-                if (_blocker.CanInteract(user, ent) && _interaction.InRangeAndAccessible(user, ent.Owner))
-                    Extinguish(ent);
-            },
-        });
     }
 
     private void OnExamined(Entity<ShishaComponent> ent, ref ExaminedEvent args)

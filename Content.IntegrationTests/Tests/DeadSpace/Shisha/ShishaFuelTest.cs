@@ -1,7 +1,6 @@
 using System.Linq;
 using Content.IntegrationTests.Tests.Movement;
 using Content.Server.DeadSpace.Smokables.Systems;
-using Content.Shared.Atmos;
 using Content.Shared.Chemistry.Components;
 using Content.Shared.Chemistry.EntitySystems;
 using Content.Shared.DeadSpace.Smokables;
@@ -9,7 +8,6 @@ using Content.Shared.FixedPoint;
 using Content.Shared.Hands;
 using Content.Shared.Hands.Components;
 using Content.Shared.Stacks;
-using Content.Shared.Verbs;
 using Robust.Client.GameObjects;
 using Robust.Shared.GameObjects;
 
@@ -161,10 +159,15 @@ public sealed class ShishaFuelTest : MovementTest
     public async Task FullBowlRejectsFillerWithoutConsumingIt()
     {
         await SpawnTarget("Shisha", PlayerCoords);
-        await Load("GroundCannabis");
+        await Server.WaitPost(() =>
+        {
+            Solutions.TryGetSolution(Base.Owner, Base.Comp.Solution, out var reservoir, out var bowl);
+            Solutions.TryAddReagent(reservoir!.Value, "THC", bowl!.MaxVolume - FixedPoint2.New(10), out _);
+        });
+        var volume = Bowl().Volume;
         var filler = await PlaceInHands("GroundCannabis", 2);
         await Interact();
-        Assert.That(Bowl().Volume, Is.EqualTo(FixedPoint2.New(20)));
+        Assert.That(Bowl().Volume, Is.EqualTo(volume));
         Assert.That(SEntMan.GetComponent<StackComponent>(ToServer(filler)).Count, Is.EqualTo(2));
     }
 
@@ -208,46 +211,28 @@ public sealed class ShishaFuelTest : MovementTest
     }
 
     [Test]
-    public async Task ExtinguishingCancelsPuffAndPreservesRemainingFuel()
+    public async Task CanAddFillerWhileLit()
     {
         await Prepare();
         await Light();
-        await TakeHose();
-        await Puff(false);
-        await Server.WaitPost(() =>
-        {
-            var ev = new ExtinguishEvent();
-            SEntMan.EventBus.RaiseLocalEvent(Base.Owner, ref ev);
-        });
-        await RunTicks(5);
         var fuel = Base.Comp.FuelRemaining;
-        await RunSeconds(1);
-        Assert.That(Base.Comp.Lit, Is.False);
-        Assert.That(Base.Comp.FuelRemaining, Is.EqualTo(fuel));
-        Assert.That(Bowl().Volume, Is.EqualTo(FixedPoint2.New(10)));
-        Assert.That(ActiveDoAfters, Is.Empty);
-        await Sprite("icon-coal-no-hose");
-    }
-
-    [Test]
-    public async Task MustExtinguishBeforeAddingMoreFiller()
-    {
-        await Prepare();
-        await Light();
         var filler = await PlaceInHands("GroundTobacco", 2);
-        await Interact();
-        Assert.That(SEntMan.GetComponent<StackComponent>(ToServer(filler)).Count, Is.EqualTo(2));
-        Assert.That(Bowl().Volume, Is.EqualTo(FixedPoint2.New(10)));
-        await Server.WaitAssertion(() =>
-        {
-            var verbs = Server.System<SharedVerbSystem>();
-            var verb = verbs.GetLocalVerbs(Base, SPlayer, typeof(AlternativeVerb))
-                .Single(v => v.Text == Robust.Shared.Localization.Loc.GetString("shisha-extinguish"));
-            verbs.ExecuteVerb(verb, SPlayer, Base);
-            Assert.That(Base.Comp.Lit, Is.False);
-        });
         await Interact();
         Assert.That(SEntMan.GetComponent<StackComponent>(ToServer(filler)).Count, Is.EqualTo(1));
         Assert.That(Bowl().Volume, Is.EqualTo(FixedPoint2.New(20)));
+        Assert.That(Base.Comp.Lit, Is.True);
+        Assert.That(Base.Comp.FuelRemaining, Is.LessThanOrEqualTo(fuel));
+        await Sprite("icon-lit");
+        await TakeHose();
+        await Puff();
+        Assert.That(Bowl().Volume, Is.EqualTo(FixedPoint2.New(14)));
+    }
+
+    [Test]
+    public async Task BowlHoldsEnoughFillerForOneCoal()
+    {
+        await Prepare();
+        var puffs = (int) Math.Ceiling(Base.Comp.FuelPerItem / Base.Comp.PuffDuration.TotalSeconds);
+        Assert.That(Bowl().MaxVolume, Is.GreaterThanOrEqualTo(Base.Comp.Dose * puffs));
     }
 }

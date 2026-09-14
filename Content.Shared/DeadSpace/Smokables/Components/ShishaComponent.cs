@@ -40,7 +40,7 @@ public sealed partial class ShishaComponent : Component
     /// <summary>Presentation assets can be replaced in the prototype without changing the smoking logic.</summary>
     [DataField]
     public SpriteSpecifier RopeSprite =
-        new SpriteSpecifier.Rsi(new ResPath("_DeadSpace/Objects/Consumable/Smokeables/hookah_rope.rsi"), "rope");
+        new SpriteSpecifier.Rsi(new ResPath("_SS220/Objects/Specific/Hookah/hookah_rope.rsi"), "rope");
 
     [DataField]
     public EntProtoId PuffPrototype = "ShishaPuff";

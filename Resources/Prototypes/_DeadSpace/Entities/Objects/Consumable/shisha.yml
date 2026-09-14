@@ -10,7 +10,7 @@
     puffDuration: 2
     hoseSag: 0.15
     ropeSprite:
-      sprite: _DeadSpace/Objects/Consumable/Smokeables/hookah_rope.rsi
+      sprite: _SS220/Objects/Specific/Hookah/hookah_rope.rsi
       state: rope
     puffPrototype: ShishaPuff
     puffSound:
@@ -18,7 +18,7 @@
     emptyPuffSound:
       path: /Audio/Effects/Chemistry/bubbles.ogg
   - type: Sprite
-    sprite: _DeadSpace/Objects/Consumable/Smokeables/hookah.rsi
+    sprite: _SS220/Objects/Specific/Hookah/hookah.rsi
     layers:
     - state: icon-no-hose
       map: [ "enum.ShishaVisuals.Base" ]
@@ -31,7 +31,7 @@
           False: { state: icon-no-hose }
   - type: Item
     size: Normal
-    sprite: _DeadSpace/Objects/Consumable/Smokeables/hookah.rsi
+    sprite: _SS220/Objects/Specific/Hookah/hookah.rsi
     inhandVisuals:
       left:
       - state: icon-no-hose
@@ -65,11 +65,11 @@
   components:
   - type: ShishaHose
   - type: Sprite
-    sprite: _DeadSpace/Objects/Consumable/Smokeables/hookah_hose.rsi
+    sprite: _SS220/Objects/Specific/Hookah/hookah_hose.rsi
     state: icon
   - type: Item
     size: Small
-    sprite: _DeadSpace/Objects/Consumable/Smokeables/hookah_hose.rsi
+    sprite: _SS220/Objects/Specific/Hookah/hookah_hose.rsi
 
 # Cosmetic only: no chemical smoke, occlusion, or atmosphere changes.
 - type: entity
